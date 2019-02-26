@@ -59,8 +59,19 @@ func (store *MemoryCacheStore) Get(key string) (value interface{}, ok bool) {
 	existingEntry, added = store.entries[key]
 	store.RUnlock()
 	ok = added
-	if ok {
+	if ok && !existingEntry.isExpired() {
 		value = existingEntry.value
+	}
+	if existingEntry != nil && existingEntry.isExpired() {
+		if existingEntry.policy.CreateCallback != nil {
+			if v, err := existingEntry.policy.CreateCallback(key); err == nil {
+				existingEntry.value = v
+				store.update(existingEntry, CacheEntryRemovedReasonExpired)
+				return v, true
+			}
+		}
+		store.remove(existingEntry, CacheEntryRemovedReasonExpired)
+		ok = false
 	}
 	return
 }

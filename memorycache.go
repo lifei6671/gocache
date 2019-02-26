@@ -28,9 +28,9 @@ func (memory *MemoryCache) Add(key string, value interface{}) {
 }
 
 // 增加缓存并设置策略
-func (memory *MemoryCache) AddWithPolicy(key string, value interface{}, policy *CacheItemPolicy) {
+func (memory *MemoryCache) AddWithPolicy(key string, value interface{}, policy CacheItemPolicy) {
 	store := memory.getStore(key)
-	store.AddWithPolicy(key, value, policy)
+	store.AddWithPolicy(key, value, &policy)
 }
 
 func (memory *MemoryCache) Get(key string) (value interface{}, ok bool) {
