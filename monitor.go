@@ -8,4 +8,9 @@ type ChangeMonitor interface {
 	OnChanged(data interface{})
 }
 
-type OnChangedCallback func()
+type ChangeMonitorList struct {
+}
+
+func NewChangeMonitorList() *ChangeMonitorList {
+	return &ChangeMonitorList{}
+}
