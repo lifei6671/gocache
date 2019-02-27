@@ -24,8 +24,8 @@ type CacheItemPolicy struct {
 	CreateCallback CacheEntryCreateCallback
 }
 
-func NewCacheItemPolicy() *CacheItemPolicy {
-	return &CacheItemPolicy{
+func NewCacheItemPolicy() CacheItemPolicy {
+	return CacheItemPolicy{
 		AbsoluteExpiration: MaxTimeValue,
 	}
 }

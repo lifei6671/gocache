@@ -7,7 +7,7 @@ type CacheEntryRemovedCallback func(arguments CacheEntryRemovedArguments)
 type CacheEntryUpdateCallback func(arguments CacheEntryUpdateArguments)
 
 // 当缓存失效后，可以指定重新生成缓存的回调方法
-type CacheEntryCreateCallback func(key string) (value interface{}, err error)
+type CacheEntryCreateCallback func(key string, oldValue interface{}) (value interface{}, err error)
 
 // 用于处理对被监视项的更改
 type OnChangedCallback func(state interface{})

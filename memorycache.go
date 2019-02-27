@@ -1,11 +1,14 @@
 package gocache
 
+import "context"
+
 var SHARD_COUNT = 32
 
 type MemoryCache struct {
 	stores     []*MemoryCacheStore
 	storeCount int
 	closed     bool
+	cancel     func()
 }
 
 func NewMemoryCache() *MemoryCache {
@@ -14,9 +17,12 @@ func NewMemoryCache() *MemoryCache {
 		stores:     make([]*MemoryCacheStore, SHARD_COUNT),
 		storeCount: SHARD_COUNT,
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cache.cancel = cancel
 
 	for i := 0; i < SHARD_COUNT; i++ {
-		cache.stores[i] = &MemoryCacheStore{entries: make(map[string]*memoryCacheEntry, 10000)}
+		cache.stores[i] = NewMemoryCacheStore(ctx)
 	}
 
 	return cache

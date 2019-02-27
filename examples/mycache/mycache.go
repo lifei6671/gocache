@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/lifei6671/gocache"
 	"log"
 	"time"
@@ -31,8 +32,9 @@ func main() {
 
 	policy := gocache.CacheItemPolicy{
 		SlidingExpiration: time.Second * 10,
-		CreateCallback: func(key string) (value interface{}, err error) {
-			return "aaaaaaaaaaaa", nil
+		CreateCallback: func(key string, oldValue interface{}) (value interface{}, err error) {
+
+			return fmt.Sprintf("aaaaaaaaaaaa:%s", oldValue), nil
 		},
 		RemovedCallback: func(arguments gocache.CacheEntryRemovedArguments) {
 			log.Println(arguments.RemovedReason)
