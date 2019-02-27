@@ -2,6 +2,8 @@ package gocache
 
 import "time"
 
+var MaxTimeValue = time.Date(9999, 12, 31, 23, 59, 59, 9999999, time.Local)
+
 //指定已移除或将要移除某个缓存项的原因
 type CacheEntryRemovedReason int
 
