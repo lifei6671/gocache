@@ -1,6 +1,10 @@
 package gocache
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"time"
+)
 
 var SHARD_COUNT = 32
 
@@ -9,20 +13,22 @@ type MemoryCache struct {
 	storeCount int
 	closed     bool
 	cancel     func()
+	interval   time.Duration
 }
 
-func NewMemoryCache() *MemoryCache {
+func NewMemoryCache(interval time.Duration) *MemoryCache {
 
 	cache := &MemoryCache{
 		stores:     make([]*MemoryCacheStore, SHARD_COUNT),
 		storeCount: SHARD_COUNT,
+		interval:   interval,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cache.cancel = cancel
 
 	for i := 0; i < SHARD_COUNT; i++ {
-		cache.stores[i] = NewMemoryCacheStore(ctx)
+		cache.stores[i] = NewMemoryCacheStore(ctx, fmt.Sprintf("REGION-%d", i), interval)
 	}
 
 	return cache
@@ -30,18 +36,29 @@ func NewMemoryCache() *MemoryCache {
 
 func (memory *MemoryCache) Add(key string, value interface{}) {
 	store := memory.getStore(key)
-	store.Add(key, value)
+	item := NewCacheItem(key, value)
+	store.Add(item)
+}
+
+func (memory *MemoryCache) AddWithCacheItem(item CacheItem) {
+	store := memory.getStore(item.Key)
+	store.Add(&item)
 }
 
 // 增加缓存并设置策略
-func (memory *MemoryCache) AddWithPolicy(key string, value interface{}, policy CacheItemPolicy) {
+func (memory *MemoryCache) AddWithSlidingExpiration(key string, value interface{}, expiration time.Duration) {
 	store := memory.getStore(key)
-	store.AddWithPolicy(key, value, &policy)
+	store.AddWithSlidingExpiration(key, value, expiration)
+}
+
+func (memory *MemoryCache) AddWithAbsoluteExpiration(key string, value interface{}, expiration time.Time) {
+	store := memory.getStore(key)
+	store.AddWithAbsoluteExpiration(key, value, expiration)
 }
 
 func (memory *MemoryCache) Get(key string) (value interface{}, ok bool) {
 	store := memory.getStore(key)
-	return store.Get(key)
+	return store.GetValue(key)
 }
 
 // ContainsKey 判断缓存中是否存在指定键
