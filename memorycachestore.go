@@ -2,6 +2,7 @@ package gocache
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ type MemoryCacheStore struct {
 	scanInterval time.Duration
 	once         sync.Once
 	cancel       func()
+	closed       bool
 }
 
 func NewMemoryCacheStore(ctx context.Context, regionName string, interval time.Duration) *MemoryCacheStore {
@@ -59,6 +61,7 @@ func NewMemoryCacheStore(ctx context.Context, regionName string, interval time.D
 }
 
 func (store *MemoryCacheStore) Add(item *CacheItem) {
+	store.checkClosed()
 	store.RLock()
 	existingItem, ok := store.entries[item.Key]
 	store.RUnlock()
@@ -99,6 +102,7 @@ func (store *MemoryCacheStore) AddWithAbsoluteExpiration(key string, value inter
 }
 
 func (store *MemoryCacheStore) GetValue(key string) (value interface{}, ok bool) {
+	store.checkClosed()
 	store.RLock()
 	existingItem, ok := store.entries[key]
 	//log.Println(existingItem.Key)
@@ -129,16 +133,52 @@ func (store *MemoryCacheStore) GetValue(key string) (value interface{}, ok bool)
 	return nil, false
 }
 
+func (store *MemoryCacheStore) Remove(key string) (value interface{}, ok bool) {
+	store.checkClosed()
+	store.Lock()
+	item, ok := store.entries[key]
+	if ok {
+		item.callRemovedCallback(CacheEntryRemovedReasonRemoved)
+		delete(store.entries, key)
+		delete(store.expires, key)
+		store.Unlock()
+		return item.Value, ok
+	}
+	store.Unlock()
+	return nil, false
+}
+
 func (store *MemoryCacheStore) ContainsKey(key string) bool {
 	_, ok := store.GetValue(key)
 	return ok
 }
 
 func (store *MemoryCacheStore) Count() int {
+	store.checkClosed()
 	store.RLock()
 	c := len(store.entries)
 	store.RUnlock()
 	return c
+}
+
+func (store *MemoryCacheStore) Clear() {
+	store.checkClosed()
+	store.Lock()
+	store.entries = make(map[string]*CacheItem, 2000)
+	store.expires = make(map[string]*CacheItem, 2000)
+	store.Unlock()
+}
+
+func (store *MemoryCacheStore) Close() {
+	store.checkClosed()
+	store.Lock()
+	store.closed = true
+	if store.cancel != nil {
+		store.cancel()
+	}
+	store.entries = nil
+	store.expires = nil
+	store.Unlock()
 }
 
 func (store *MemoryCacheStore) check(item *CacheItem) {
@@ -182,4 +222,13 @@ func (store *MemoryCacheStore) remove(item *CacheItem, reason CacheEntryRemovedR
 		item.RemovedCallback(item.Key, item.Value, reason)
 	}
 	store.Unlock()
+}
+
+func (store *MemoryCacheStore) checkClosed() {
+	store.RLock()
+	if store.closed {
+		store.RUnlock()
+		panic(fmt.Sprintf("[%s] cache closed", store.regionName))
+	}
+	store.RUnlock()
 }

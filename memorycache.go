@@ -61,6 +61,11 @@ func (memory *MemoryCache) Get(key string) (value interface{}, ok bool) {
 	return store.GetValue(key)
 }
 
+func (memory *MemoryCache) Remove(key string) (value interface{}, ok bool) {
+	store := memory.getStore(key)
+	return store.Remove(key)
+}
+
 // ContainsKey 判断缓存中是否存在指定键
 func (memory *MemoryCache) ContainsKey(key string) bool {
 	store := memory.getStore(key)
@@ -75,7 +80,23 @@ func (memory *MemoryCache) Count() int {
 	return c
 }
 
+func (memory *MemoryCache) Clear() {
+	for _, store := range memory.stores {
+		store.Clear()
+	}
+}
+
+func (memory *MemoryCache) Close() {
+	memory.closed = true
+	for _, store := range memory.stores {
+		store.Close()
+	}
+}
+
 func (memory *MemoryCache) getStore(key string) *MemoryCacheStore {
+	if memory.closed {
+		panic("cache closed")
+	}
 	idx := int(hashKey(key) % uint32(memory.storeCount))
 
 	return memory.stores[idx]
