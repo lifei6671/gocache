@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/lifei6671/gocache"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"time"
 )
 
@@ -12,6 +14,10 @@ type User struct {
 }
 
 func main() {
+	//这里实现了远程获取pprof数据的接口
+	go func() {
+		log.Println(http.ListenAndServe("localhost:7777", nil))
+	}()
 	m := gocache.NewMemoryCache(time.Second * 2)
 
 	m.Add("tools-all", User{Name: "tools-all"})

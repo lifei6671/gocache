@@ -28,8 +28,8 @@ func NewMemoryCacheStore(ctx context.Context, regionName string, interval time.D
 	}
 	store := &MemoryCacheStore{
 		regionName:   regionName,
-		entries:      make(map[string]*CacheItem, 2000),
-		expires:      make(map[string]*CacheItem, 2000),
+		entries:      make(map[string]*CacheItem, 200),
+		expires:      make(map[string]*CacheItem, 200),
 		scanInterval: interval,
 	}
 	ctx, cancel := context.WithCancel(ctx)
@@ -43,8 +43,9 @@ func NewMemoryCacheStore(ctx context.Context, regionName string, interval time.D
 			case <-timer.C:
 				store.RLock()
 				for _, item := range store.expires {
+					existingItem := item
 					store.RUnlock()
-					store.check(item)
+					store.check(existingItem)
 					store.RLock()
 				}
 				store.RUnlock()
@@ -73,6 +74,7 @@ func (store *MemoryCacheStore) Add(item *CacheItem) {
 
 		if item.HasExpiration() {
 			store.expires[item.Key] = item
+			item.keepLive()
 		} else {
 			delete(store.expires, item.Key)
 		}
@@ -85,6 +87,7 @@ func (store *MemoryCacheStore) Add(item *CacheItem) {
 		if item.HasExpiration() {
 			store.expires[item.Key] = item
 		}
+		item.keepLive()
 		store.Unlock()
 	}
 }

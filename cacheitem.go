@@ -27,7 +27,6 @@ func NewCacheItemWithSlidingExpiration(key string, value interface{}, expiration
 	return &CacheItem{
 		Key:               key,
 		Value:             value,
-		absExp:            time.Now().Add(expiration),
 		slidingExpiration: expiration,
 	}
 }
